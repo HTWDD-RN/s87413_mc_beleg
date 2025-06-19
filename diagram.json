@@ -1,0 +1,11 @@
+{
+    "version": 1,
+    "author": "Raushan Vishwakarma",
+    "editor": "wokwi",
+    "parts": [
+      { "type": "wokwi-arduino-uno", "id": "uno", "top": 19.8, "left": -144.6, "attrs": {} },
+      { "type": "wokwi-led", "id": "led1", "top": -128.4, "left": 3.8, "attrs": { "color": "red" } }
+    ],
+    "connections": [ [ "led1:C", "uno:GND.1", "green", [ "v0" ] ], [ "led1:A", "uno:13", "green", [ "v0" ] ] ],
+    "dependencies": {}
+  }
