@@ -1,0 +1,163 @@
+#include <Arduino.h>
+
+#ifdef OUTPUT_UNO_R4_MATRIX
+  #include "Arduino_LED_Matrix.h"
+  ArduinoLEDMatrix matrix;
+#endif
+
+byte isStateShown = 0;
+uint8_t currentPlayer = 1; // 1 = Player 1, 2 = Player 2
+byte dbgCnt = 0;
+
+void setup() {
+  Serial.begin(115200);
+  //Serial.begin(9600);
+
+#ifdef OUTPUT_UNO_R4_MATRIX
+  matrix.begin();
+#endif
+
+}
+
+uint8_t state[3][3] = {
+  {0,0,0},
+  {0,0,0},
+  {0,0,0}
+};
+
+#ifdef OUTPUT_UNO_R4_MATRIX
+
+uint8_t r4Frame[8][12] = {
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+  { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+};
+
+void showState(){
+  //[zeile][spalte]
+  for(int z=0;z<3;z++){
+    for(int s=0; s<3;s++){
+      if(state[z][s] >= 1){
+        r4Frame[z*3+0][1+s*3+1] = 1;
+        r4Frame[z*3+1][1+s*3+2] = 1;
+        if(state[z][s] == 1){
+          r4Frame[z*3+0][1+s*3+2] = 1;
+          r4Frame[z*3+1][1+s*3+1] = 1;
+        }
+      }
+      else{
+        r4Frame[z*3+0][1+s*3+1] = 0;
+        r4Frame[z*3+1][1+s*3+2] = 0;
+        r4Frame[z*3+0][1+s*3+2] = 0;
+        r4Frame[z*3+1][1+s*3+1] = 0;
+      }
+    }
+  }
+}
+
+#elif OUTPUT_SERIAL
+
+#endif
+
+void showState(){
+  for(int z=0; z<3 ;z++){
+    char strBuf[7];
+    for(int s=0; s<3; s++){
+      strBuf[s*2] = ' ';
+      if(state[z][s] == 0){
+        strBuf[s*2 + 1] = ' ';
+      }
+      else if(state[z][s] == 1){
+        strBuf[s*2 + 1] = 'o';
+      }
+      else if(state[z][s] == 2){
+        strBuf[s*2 + 1] = 'x';
+      }
+    }
+    strBuf[6] = 0;
+    Serial.println(strBuf);
+    //sprintf(strBuf, " %c %c %c\n", );
+  }
+  Serial.println();
+}
+
+#ifdef OUTPUT_UNO_R4_MATRIX
+
+void rasterOnOff(int on){
+  //[zeile][spalte]
+    for(int z=0; z<8; z++){
+      if(z==2 || z==5){
+        for(int s=2; s<=9; s++){
+          r4Frame[z][s] = on;
+        }
+      }
+      else{
+          r4Frame[z][4] = on;
+          r4Frame[z][7] = on;
+      }
+    }
+}
+
+#endif
+
+/*/
+void ausgabe(uint8_t[][] status, int statusmeldung){
+	Serial.print("Statusmeldung: " + statusmeldung);
+	for(int i = 0; i<3; i++){
+		for(int j = 0 ; j<3; j++){
+			Serial.println(status[i][j] + " " + status[i][j+1] + " " +  }
+		}
+	}
+}	
+*/
+
+void buttonPressed(uint8_t buttonNr){
+  uint8_t btnIdx = buttonNr - 1;
+	// hier soll der Status-Array geaendert werden
+	// 0-8: naechster Spieler macht Zug
+	// 16: reset
+  if((btnIdx == 3 || btnIdx == 7 || (btnIdx >= 11 && btnIdx != 15) )){
+    return;
+  }
+  state [btnIdx / 4][btnIdx % 4] = currentPlayer;
+  currentPlayer = (currentPlayer == 1)? 2: 1;
+  isStateShown = false;
+}
+
+void loop(){
+  if(!isStateShown){
+    showState();
+    Serial.println("........");
+    isStateShown = 1;
+  }
+
+
+  if(dbgCnt == 0){
+    buttonPressed(1);
+    dbgCnt++;
+  }
+  else if(dbgCnt == 1){
+    buttonPressed(6);
+    dbgCnt++;
+  }
+ else if(dbgCnt == 2){
+    buttonPressed(9);
+    dbgCnt++;
+  }
+  
+
+#ifdef OUTPUT_UNO_R4_MATRIX
+  rasterOnOff(0);
+  matrix.renderBitmap(r4Frame, 8, 12);
+  delay(2000);
+
+  rasterOnOff(1);
+  matrix.renderBitmap(r4Frame, 8, 12);
+  delay(250);
+#endif
+}
