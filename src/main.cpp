@@ -138,9 +138,6 @@ void handleClient(WiFiClient client)
 		}
 	}
 
-	//Serial.println("Request:");
-	//Serial.println(request);
-
 	String response;
 	if (request.indexOf("GET /gamestate") >= 0)
 	{
@@ -159,8 +156,9 @@ void handleClient(WiFiClient client)
 		response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n";
 		response += json;
 	}
-	else
+	else if (request.indexOf("POST /setplayer") >= 0)
 	{
+    Serial.println(request);
 		response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 		response += webpage;
 	}
@@ -168,7 +166,6 @@ void handleClient(WiFiClient client)
 	client.print(response);
 	delay(1);
 	client.stop();
-	//Serial.println("Client disconnected.");
 }
 
 void setup() {
