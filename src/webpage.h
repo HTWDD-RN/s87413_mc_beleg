@@ -2,7 +2,6 @@
 #define WEBPAGE_H
 
 const char webpage[] PROGMEM = R"rawliteral(
-<!-- /data/index.html -->
 <!DOCTYPE html>
 <html>
 
@@ -79,6 +78,13 @@ const char webpage[] PROGMEM = R"rawliteral(
     </div>
 
     <script>
+        function setPlayer(field) {
+            fetch('/setplayer', {
+                method: 'POST',
+                body: JSON.stringify(field)
+            })
+        }
+
         function fetchGameState() {
             fetch('/gamestate')
                 .then(response => response.json())
@@ -90,7 +96,7 @@ const char webpage[] PROGMEM = R"rawliteral(
                         table += '<tr>';
                         for (let j = 0; j < 3; j++) {
                             let mark = board[i][j] === 1 ? 'X' : (board[i][j] === 0 ? 'O' : '');
-                            table += `<td>${mark}</td>`;
+                            table += `<td onclick="setPlayer(${i},${j})">${mark}</td>`;
                         }
                         table += '</tr>';
                     }
@@ -101,7 +107,7 @@ const char webpage[] PROGMEM = R"rawliteral(
                 });
         }
 
-        setInterval(fetchGameState, 1000);
+        setInterval(fetchGameState, 500);
         fetchGameState();
     </script>
 </body>
