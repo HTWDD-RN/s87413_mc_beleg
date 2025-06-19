@@ -102,10 +102,14 @@ int tasten[anz_tasten]={933,780,670,565,483,439,403,361,328,307,290,269,240,239,
 
 // Timer
 unsigned long timer = 0;
+unsigned long deltaTime = 0;
 unsigned long buttonTimer = 0;
+unsigned long lastTimer = 0;
 
 // Sound
 const int buzzer = 10;
+
+boolean gameOver = false;
 
 
 // notes in the melody:
@@ -188,7 +192,6 @@ void setup() {
 	WiFi.begin(ssid, password);
 
   pinMode(INTERRUPTPIN, INPUT_PULLUP);
-  //attachInterrupt(digitalPinToInterrupt(INTERRUPTPIN),reset_status,CHANGE);
   attachInterrupt(digitalPinToInterrupt(INTERRUPTPIN),handle_buttonPressed, RISING);
 
   OPAMP.begin(OPAMP_SPEED_HIGHSPEED); 
@@ -197,8 +200,9 @@ void setup() {
 
 int dbgServerAvailable = 0;
 void loop() {
-  //timer += millis();
-
+  deltaTime = millis() - lastTimer;
+  lastTimer = millis();
+  timer += deltaTime;
   /*
 
   // read which button was pressed as adc value
@@ -273,18 +277,15 @@ void loop() {
     }
   }
   // draw LEDs
-
+  if (timer >= 500){
+    timer -= 500;
     draw_grid();
-    draw_status();
     currentPattern = (currentPattern + 1) % ANZ_PATTERN;
-
-  //if (timer >= 1000){
-  //  timer -= 1000;
-  //}
-
+  }
+  draw_status();
   matrix.renderBitmap(grid, 8 ,12);
 
-  delay(1000);
+  // delay(1000);
 }
 
 // checkt which button was pressed as index value
@@ -326,7 +327,7 @@ void draw_status() {
 void handle_buttonPressed(){
   unsigned long t = millis();
   dbgBtnPressed = t - tButtonLastPressed;
-  if((t - tButtonLastPressed) < 1000) return;
+  if(dbgBtnPressed < 100) return;
 
   int adc = analogRead(A1);
   int taste = ADC_to_KeyNR(adc);
@@ -343,7 +344,7 @@ void buttonPressed(uint8_t buttnNr){
     return;
   }
 
-  if ((btnIdx == 3 || btnIdx == 7 || btnIdx >= 11 || status[btnIdx / 4][btnIdx % 4] != 5)) {
+  if ((btnIdx == 3 || btnIdx == 7 || btnIdx >= 11 || status[btnIdx / 4][btnIdx % 4] != 5 || gameOver)) {
     return;
   }
   status[btnIdx / 4][btnIdx % 4] = currentPlayer;
@@ -362,9 +363,8 @@ void buttonPressed(uint8_t buttnNr){
     lcd.setCursor(0,1);
     lcd.print(currentPlayer + 1);
     lcd.print(" hat gewonnen!");
-
+    gameOver = true;
     playVictorySound();
-    reset_status();
   }
   
 }
@@ -376,6 +376,7 @@ void reset_status() {
     status[i][2] = 5;
   }
   currentPlayer = 0;
+  gameOver = false;
   lcd.setCursor(0,1);
   lcd.print("Spieler 1 dran  ");
 }
