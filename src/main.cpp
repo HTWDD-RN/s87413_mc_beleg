@@ -102,14 +102,10 @@ int tasten[anz_tasten]={933,780,670,565,483,439,403,361,328,307,290,269,240,239,
 
 // Timer
 unsigned long timer = 0;
-unsigned long deltaTime = 0;
 unsigned long buttonTimer = 0;
-unsigned long lastTimer = 0;
 
 // Sound
 const int buzzer = 10;
-
-boolean gameOver = false;
 
 
 // notes in the melody:
@@ -160,12 +156,37 @@ void handleClient(WiFiClient client)
 		response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n";
 		response += json;
 	}
-	else if (request.indexOf("POST /setplayer") >= 0)
-	{
-    Serial.println(request);
-		response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
-		response += webpage;
-	}
+	else  if (request.indexOf("POST /setplayer") >= 0)
+  {
+    int contentLength = 0;
+    int contentIndex = request.indexOf("Content-Length:");
+    if (contentIndex >= 0)
+    {
+      int lineEnd = request.indexOf("\r\n", contentIndex);
+      if (lineEnd >= 0)
+      {
+        String lengthStr = request.substring(contentIndex + 15, lineEnd);
+        contentLength = lengthStr.toInt();
+      }
+    }
+
+    String body = "";
+    unsigned long bodyTimeout = millis() + 1000;
+    while (body.length() < contentLength && millis() < bodyTimeout)
+    {
+      if (client.available())
+      {
+        char c = client.read();
+        body += c;
+      }
+    }
+
+    Serial.println("=== BODY ===");
+    Serial.println(body);
+
+    response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
+    response += webpage;
+  }
 
 	client.print(response);
 	delay(1);
@@ -189,6 +210,7 @@ void setup() {
 	WiFi.begin(ssid, password);
 
   pinMode(INTERRUPTPIN, INPUT_PULLUP);
+  //attachInterrupt(digitalPinToInterrupt(INTERRUPTPIN),reset_status,CHANGE);
   attachInterrupt(digitalPinToInterrupt(INTERRUPTPIN),handle_buttonPressed, RISING);
 
   OPAMP.begin(OPAMP_SPEED_HIGHSPEED); 
@@ -197,9 +219,8 @@ void setup() {
 
 int dbgServerAvailable = 0;
 void loop() {
-  deltaTime = millis() - lastTimer;
-  lastTimer = millis();
-  timer += deltaTime;
+  //timer += millis();
+
   /*
 
   // read which button was pressed as adc value
@@ -274,15 +295,18 @@ void loop() {
     }
   }
   // draw LEDs
-  if (timer >= 500){
-    timer -= 500;
+
     draw_grid();
+    draw_status();
     currentPattern = (currentPattern + 1) % ANZ_PATTERN;
-  }
-  draw_status();
+
+  //if (timer >= 1000){
+  //  timer -= 1000;
+  //}
+
   matrix.renderBitmap(grid, 8 ,12);
 
-  // delay(1000);
+  delay(1000);
 }
 
 // checkt which button was pressed as index value
@@ -324,7 +348,7 @@ void draw_status() {
 void handle_buttonPressed(){
   unsigned long t = millis();
   dbgBtnPressed = t - tButtonLastPressed;
-  if(dbgBtnPressed < 100) return;
+  if((t - tButtonLastPressed) < 1000) return;
 
   int adc = analogRead(A1);
   int taste = ADC_to_KeyNR(adc);
@@ -341,7 +365,7 @@ void buttonPressed(uint8_t buttnNr){
     return;
   }
 
-  if ((btnIdx == 3 || btnIdx == 7 || btnIdx >= 11 || status[btnIdx / 4][btnIdx % 4] != 5 || gameOver)) {
+  if ((btnIdx == 3 || btnIdx == 7 || btnIdx >= 11 || status[btnIdx / 4][btnIdx % 4] != 5)) {
     return;
   }
   status[btnIdx / 4][btnIdx % 4] = currentPlayer;
@@ -360,8 +384,9 @@ void buttonPressed(uint8_t buttnNr){
     lcd.setCursor(0,1);
     lcd.print(currentPlayer + 1);
     lcd.print(" hat gewonnen!");
-    gameOver = true;
+
     playVictorySound();
+    reset_status();
   }
   
 }
@@ -373,7 +398,6 @@ void reset_status() {
     status[i][2] = 5;
   }
   currentPlayer = 0;
-  gameOver = false;
   lcd.setCursor(0,1);
   lcd.print("Spieler 1 dran  ");
 }
