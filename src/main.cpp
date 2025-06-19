@@ -229,7 +229,22 @@ void loop() {
   deltaTime = millis() - lastTimer;
   lastTimer = millis();
   timer += deltaTime;
+  /*
 
+  // read which button was pressed as adc value
+    buttonTimer += millis();
+  int adc = analogRead(A1);
+  int taste = ADC_to_KeyNR(adc);
+
+
+  buttonPressed(taste);
+  if (taste != anz_tasten-1){
+  // taste++;
+    Serial.println((String)"Button " + taste + " pressed!");
+  }
+  buttonTimer -= 1000;
+
+  */
   if(dbgBtnPressed > 0){
     Serial.print("dbgButtonPressed: ");
     Serial.println(dbgBtnPressed);

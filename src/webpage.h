@@ -96,13 +96,13 @@ const char webpage[] PROGMEM = R"rawliteral(
                         table += '<tr>';
                         for (let j = 0; j < 3; j++) {
                             let mark = board[i][j] === 1 ? 'X' : (board[i][j] === 0 ? 'O' : '');
-                            table += `<td onclick="setPlayer(${i},${j})">${mark}</td>`;
+                            table += `<td onclick="setPlayer('${i},${j}')">${mark}</td>`;
                         }
                         table += '</tr>';
                     }
                     document.getElementById('board').innerHTML = table;
 
-                    const messages = ['Spieler X ist an der Reihe.', 'Spieler Y ist an der Reihe.', 'X Hat Gewonnen!', 'O Hat Gewonnen!'];
+                    const messages = ['Spieler O ist an der Reihe.', 'Spieler X ist an der Reihe.', 'X Hat Gewonnen!', 'O Hat Gewonnen!'];
                     document.getElementById('statusText').innerText = messages[status];
                 });
         }
