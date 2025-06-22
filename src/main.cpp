@@ -462,7 +462,7 @@ void playVictorySound()
 	}
 }
 
-/// Setup for lcd display
+// Setup for lcd display
 void setupLibCrystal() {
 
 	// Set up the LCD's number of columns and rows:
