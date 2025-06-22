@@ -1,6 +1,9 @@
 # Belegarbeit im Kurs Programmierung von Mikrocontrollern (I-223, Sommersemester 2025)
 ## Das Tic-Tac-Toe-Spiel
 ![Image](https://github.com/user-attachments/assets/423a0515-ce39-466c-907d-76c6e42309c8)
+
+[Präsentationsvideo](https://www.informatik.htw-dresden.de/~s87413/mc/tic-tac-toe.webm) (webm-Muxer, vp9-Videocodec, opus-Audiocodec)
+
 - Spielmodus: zwei Menschen spielen gegeneinander
   - der Algorithmus zum Spielen gegen den Mikrocontroller wurde nicht implementiert
 - Benutzereingaben und Darstellung des Spielstandes:
