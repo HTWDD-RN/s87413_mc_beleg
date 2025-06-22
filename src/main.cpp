@@ -1,12 +1,12 @@
 #include <Arduino.h>
 #include <WiFiS3.h>
-#include "webpage.h"
+#include <OPAMP.h>
 
 #include "Arduino_LED_Matrix.h"
 #include "LiquidCrystal.h"
-#include "pitches.h"
 
-#include <OPAMP.h>
+#include "pitches.h"
+#include "webpage.h"
 
 #define MAX_Y 8
 #define MAX_X 12
@@ -31,8 +31,8 @@ unsigned long tButtonLastPressed = 0;
 boolean isWiFiErledigt = false;
 int isButtonPressed = 16;
 
-const char *ssid = "iPhone";	   //"AndMotoG";
-const char *password = "gmxspot1"; //"aaaabbbb";
+const char *ssid = "";
+const char *password = "";
 
 WiFiServer server(80);
 
@@ -85,7 +85,7 @@ ArduinoLEDMatrix matrix;
 int currentPattern = 0;
 uint8_t currentPlayer = 0; // Player 1 == 0, Player 2 == 1 , free == 5
 
-// Tasten 0 bis 16
+// Keys 0 bis 16
 const int anz_tasten = 17;
 int tasten[anz_tasten] = {933, 780, 670, 565, 483, 439, 403, 361, 328, 307, 290, 269, 240, 239, 228, 100, 0};
 
@@ -102,63 +102,57 @@ boolean gameOver = false;
 int state = 0;
 
 // notes in the melody:
-int melody[] = {
-	NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
+int melody[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
 
 // note durations: 4 = quarter note, 8 = eighth note, etc.:
-int noteDurations[] = {
-	4, 8, 8, 4, 4, 4, 4, 4};
+int noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
-void handleClient(WiFiClient client)
-{
+void handleClient(WiFiClient client) {
 	Serial.print("+");
 	String request = "";
 	unsigned long timeout = millis() + 1000;
-	while (client.connected() && millis() < timeout)
-	{
-		if (client.available())
-		{
+
+	// Waiting for client to connect and send request
+	while (client.connected() && millis() < timeout) {
+		if (client.available()) {
 			char c = client.read();
 			request += c;
 
-			if (request.endsWith("\r\n\r\n"))
-			{
+			if (request.endsWith("\r\n\r\n")) {
 				break;
 			}
 		}
 	}
 
 	String response;
-	if (request.indexOf("GET /gamestate") >= 0)
-	{
+	// Rquest for current game state
+	if (request.indexOf("GET /gamestate") >= 0) {
 		String json = "{\"game\":[";
-		for (int i = 0; i < 3; i++)
-		{
+		for (int i = 0; i < 3; i++) {
 			json += "[";
-			for (int j = 0; j < 3; j++)
-			{
+			for (int j = 0; j < 3; j++) {
 				json += String(status[i][j]);
-				if (j < 2)
+				if (j < 2) {
 					json += ",";
+				}
 			}
 			json += "]";
-			if (i < 2)
+			if (i < 2) {
 				json += ",";
+			}
 		}
-		json += "],\"status\":" + String(currentPlayer) + "}";
 
+		json += "],\"status\":" + String(currentPlayer) + "}";
 		response = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\r\n";
 		response += json;
 	}
-	else if (request.indexOf("POST /setplayer") >= 0)
-	{
+	// Request to set mark in field
+	else if (request.indexOf("POST /setplayer") >= 0) {
 		int contentLength = 0;
 		int contentIndex = request.indexOf("Content-Length:");
-		if (contentIndex >= 0)
-		{
+		if (contentIndex >= 0) {
 			int lineEnd = request.indexOf("\r\n", contentIndex);
-			if (lineEnd >= 0)
-			{
+			if (lineEnd >= 0) {
 				String lengthStr = request.substring(contentIndex + 15, lineEnd);
 				contentLength = lengthStr.toInt();
 			}
@@ -166,10 +160,10 @@ void handleClient(WiFiClient client)
 
 		String body = "";
 		unsigned long bodyTimeout = millis() + 1000;
-		while (body.length() < contentLength && millis() < bodyTimeout)
-		{
-			if (client.available())
-			{
+		
+		// Read body
+		while (body.length() < contentLength && millis() < bodyTimeout) {
+			if (client.available()) {
 				char c = client.read();
 				body += c;
 			}
@@ -180,8 +174,8 @@ void handleClient(WiFiClient client)
 
 		playerMove(x, y);
 	}
-	else
-	{
+	// Request for webpage
+	else {
 		response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
 		response += webpage;
 	}
@@ -191,9 +185,7 @@ void handleClient(WiFiClient client)
 	client.stop();
 }
 
-void setup()
-{
-	// put your setup code here, to run once:
+void setup() {
 	Serial.begin(115200);
 
 	setupLibCrystal();
@@ -204,7 +196,8 @@ void setup()
 	delay(1000);
 
 	Serial.print("Connecting to WiFi");
-	// linke obere diode wird blinken, solange wifi nicht verbunden.
+
+	// Left Upper diode will blink as long as wifi is not connected
 	grid_TIC_TAC_TOE[1][0][0] = 1;
 	WiFi.begin(ssid, password);
 
@@ -215,44 +208,40 @@ void setup()
 }
 
 int dbgServerAvailable = 0;
-void loop()
-{
+
+void loop() {
+
+	// Passive wait timer
 	deltaTime = millis() - lastTimer;
 	lastTimer = millis();
 	timer += deltaTime;
 
-	if (dbgBtnPressed > 0)
-	{
-		Serial.print("dbgButtonPressed: ");
-		Serial.println(dbgBtnPressed);
+	if (dbgBtnPressed > 0) {
 		dbgBtnPressed = 0;
 	}
-	if (isButtonPressed != 16)
-	{
-		Serial.print("Button pressed: ");
-		Serial.println(isButtonPressed);
+	if (isButtonPressed != 16) {
 		buttonPressed(isButtonPressed);
 		isButtonPressed = 16;
 	}
 
-	if ((WiFi.status() == WL_CONNECTED) && !isWiFiErledigt && (WiFi.localIP() != IPAddress(0, 0, 0, 0)))
-	{
-		// Serial.print(".");
-		// delay(500);
+	if ((WiFi.status() == WL_CONNECTED) && !isWiFiErledigt && (WiFi.localIP() != IPAddress(0, 0, 0, 0))) {
+
+		// Communicate wifi details in console or lcd display
 		Serial.println("\nConnected!");
 		Serial.print("IP Address: ");
 		Serial.println(WiFi.localIP());
 		lcd.setCursor(0, 0);
-		// lcd.print("IP:");
 		lcd.print(WiFi.localIP());
 
+		// Start webserver
 		server.begin();
-		Serial.println("Server started.");
+		Serial.println("Webserver started.");
 		grid_TIC_TAC_TOE[1][0][0] = 0;
 		isWiFiErledigt = true;
 	}
-	else if ((WiFi.status() != WL_CONNECTED))
-	{
+	else if ((WiFi.status() != WL_CONNECTED)) {
+
+		// Start without webserver
 		grid_TIC_TAC_TOE[1][0][0] = 1;
 		isWiFiErledigt = false;
 		dbgServerAvailable = 0;
@@ -261,81 +250,69 @@ void loop()
 		lcd.print(ssid);
 	}
 
-	if (isWiFiErledigt)
-	{
+	if (isWiFiErledigt) {
+
+		// Handle wifi client
 		WiFiClient client = server.available();
-		if (client)
-		{
+		if (client) {
 			grid_TIC_TAC_TOE[1][1][0] = 0;
 		}
-		else
-		{
+		else {
 			grid_TIC_TAC_TOE[1][1][0] = 1;
 		}
 
 		int dbgServerAvailableNew = server.available();
 		dbgServerAvailable = dbgServerAvailableNew;
 
-		if (client)
-		{
+		if (client) {
 			handleClient(client);
 		}
 	}
-	// draw LEDs
-	if (timer >= 500 && state == 0)
-	{
+
+	// Draw LED matrix
+	if (timer >= 500 && state == 0) {
 		timer -= 500;
 		draw_grid();
 		currentPattern = (currentPattern + 1) % ANZ_PATTERN;
 	}
+
 	matrix.renderBitmap(grid, 8, 12);
-	if (gameOver && state == 1 && timer > 600)
-	{
+
+	// Game over
+	if (gameOver && state == 1 && timer > 600) {
 		playVictorySound();
 		timer -= 600;
 		state = 0;
 	}
+
 	draw_status();
 }
 
-// checkt which button was pressed as index value
-int ADC_to_KeyNR(int adc)
-{
-	for (int i = 0; i <= anz_tasten; i++)
-	{
+// Check which button was pressed as index value
+int ADC_to_KeyNR(int adc) {
+	for (int i = 0; i <= anz_tasten; i++) {
 		if (adc >= tasten[i])
 			return i;
 	}
 	return -1;
 }
 
-// draw TIC-TAC-TOE grid layer
-void draw_grid()
-{
-	for (int y = 0; y < MAX_Y; y++)
-	{
-		for (int x = 0; x < MAX_X; x++)
-		{
+// Draw TIC-TAC-TOE grid layer
+void draw_grid() {
+	for (int y = 0; y < MAX_Y; y++) {
+		for (int x = 0; x < MAX_X; x++) {
 			grid[y][x] = grid_TIC_TAC_TOE[currentPattern][y][x];
 		}
 	}
 }
 
-// draw TIC-TAC-TOE status
-void draw_status()
-{
-	for (int i = 0; i < 3; i++)
-	{
-		for (int j = 0; j < 3; j++)
-		{
-
-			if (status[i][j] == 1 || status[i][j] == 0)
-			{
-
-				for (int y = 0; y < MAX_PATTERN_Y; y++)
-				{
-					for (int x = 0; x < MAX_PATTERN_X; x++)
-					{
+// Draw TIC-TAC-TOE status
+void draw_status() {
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			if (status[i][j] == 1 || status[i][j] == 0) {
+				for (int y = 0; y < MAX_PATTERN_Y; y++) {
+					for (int x = 0; x < MAX_PATTERN_X; x++) {
 						grid[i * 3 + y][2 + j * 3 + x] = player_pattern[status[i][j]][y][x];
 					}
 				}
@@ -344,8 +321,8 @@ void draw_status()
 	}
 }
 
-void handle_buttonPressed()
-{
+// Interrupt for button press
+void handle_buttonPressed() {
 	unsigned long t = millis();
 	dbgBtnPressed = t - tButtonLastPressed;
 	if (dbgBtnPressed < 100)
@@ -357,42 +334,37 @@ void handle_buttonPressed()
 	isButtonPressed = taste;
 }
 
-void buttonPressed(uint8_t buttnNr)
-{
+// Sets player mark when button pressed
+void buttonPressed(uint8_t buttnNr) {
 	uint8_t btnIdx = buttnNr;
 
-	if (btnIdx == 15)
-	{
+	if (btnIdx == 15) {
 		reset_status();
 		return;
 	}
 
-	if ((btnIdx == 3 || btnIdx == 7 || btnIdx >= 11 || gameOver))
-	{
+	if ((btnIdx == 3 || btnIdx == 7 || btnIdx >= 11 || gameOver)) {
 		return;
 	}
 
 	playerMove(btnIdx % 4, btnIdx / 4);
 }
 
-void playerMove(int x, int y)
-{
-	if (status[y][x] != 5)
-	{
+// Logic for setting player mark
+void playerMove(int x, int y) {
+	if (status[y][x] != 5) {
 		return;
 	}
 
 	status[y][x] = currentPlayer;
-	if (!checkVictory(currentPlayer))
-	{
+	if (!checkVictory(currentPlayer)) {
 		currentPlayer = (currentPlayer == 0) ? 1 : 0;
 		lcd.setCursor(0, 1);
 		lcd.print("Spieler ");
 		lcd.print(currentPlayer + 1);
 		lcd.print(" dran  ");
 	}
-	else
-	{
+	else {
 		draw_status();
 		matrix.renderBitmap(grid, 8, 12);
 		Serial.println((String) "Der Sieger ist Spieler: " + currentPlayer);
@@ -406,10 +378,9 @@ void playerMove(int x, int y)
 	}
 }
 
-void reset_status()
-{
-	for (int i = 0; i < 3; i++)
-	{
+// Resetting game board
+void reset_status() {
+	for (int i = 0; i < 3; i++) {
 		status[i][0] = 5;
 		status[i][1] = 5;
 		status[i][2] = 5;
@@ -420,67 +391,49 @@ void reset_status()
 	lcd.print("Spieler 1 dran  ");
 }
 
-boolean checkVictory(int currentPlayer)
-{
+// Checks victory conditions
+boolean checkVictory(int currentPlayer) {
 
-	// check Victory horizontal
-	for (int y = 0; y < 3; y++)
-	{
-		for (int x = 0; x < 3; x++)
-		{
-			if (status[y][x] != currentPlayer)
-			{
+	// Check Victory horizontal
+	for (int y = 0; y < 3; y++) {
+		for (int x = 0; x < 3; x++) {
+			if (status[y][x] != currentPlayer) {
 				break;
 			}
-			else if (x == 2)
-			{
-				Serial.println((String) "horizonal X:" + x + " Y: " + y);
+			else if (x == 2) {
 				return true;
 			}
 		}
 	}
 
-	// check Victory vertical
-	for (int x = 0; x < 3; x++)
-	{
-		for (int y = 0; y < 3; y++)
-		{
-			if (status[y][x] != currentPlayer)
-			{
+	// Check Victory vertical
+	for (int x = 0; x < 3; x++) {
+		for (int y = 0; y < 3; y++) {
+			if (status[y][x] != currentPlayer) {
 				break;
 			}
-			else if (y == 2)
-			{
-				Serial.println((String) "vertical X:" + x + " Y: " + y);
+			else if (y == 2) {
 				return true;
 			}
 		}
 	}
 
-	// check Victory diagonal left up to botten right
-	for (int y = 0; y < 3; y++)
-	{
-		if (status[y][y] != currentPlayer)
-		{
+	// Check Victory diagonal left up to bottom right
+	for (int y = 0; y < 3; y++) {
+		if (status[y][y] != currentPlayer) {
 			break;
 		}
-		else if (y == 2)
-		{
-			Serial.println((String) "digonal 1 X:" + y + " Y: " + y);
+		else if (y == 2) {
 			return true;
 		}
 	}
 
-	// check Victory diagonal left bottem to right up
-	for (int y = 0; y < 3; y++)
-	{
-		if (status[y][2 - y] != currentPlayer)
-		{
+	// Check Victory diagonal left bottom to right up
+	for (int y = 0; y < 3; y++) {
+		if (status[y][2 - y] != currentPlayer) {
 			break;
 		}
-		else if ((2 - y) == 0)
-		{
-			Serial.println((String) "diagonal 2 X:" + (2 - y) + " Y: " + y);
+		else if ((2 - y) == 0) {
 			return true;
 		}
 	}
@@ -488,32 +441,33 @@ boolean checkVictory(int currentPlayer)
 	return false;
 }
 
+// Playing sound via buzzer
 void playVictorySound()
 {
-	for (int thisNote = 0; thisNote < 8; thisNote++)
-	{
+	for (int thisNote = 0; thisNote < 8; thisNote++) {
 
-		// to calculate the note duration, take one second divided by the note type.
+		// To calculate the note duration, take one second divided by the note type.
 		// e.g. quarter note = 1000 / 4, eighth note = 1000/8, etc.
 		int noteDuration = 1000 / noteDurations[thisNote];
 		tone(buzzer, melody[thisNote], noteDuration);
 
-		// to distinguish the notes, set a minimum time between them.
+		// To distinguish the notes, set a minimum time between them.
 		// the note's duration + 30% seems to work well:
 		int pauseBetweenNotes = noteDuration * 1.30;
 		delay(pauseBetweenNotes);
-		// stop the tone playing:
+
+		// Stop the tone playing:
 		noTone(buzzer);
 	}
 }
 
-void setupLibCrystal()
-{
+/// Setup for lcd display
+void setupLibCrystal() {
 
-	// set up the LCD's number of columns and rows:
+	// Set up the LCD's number of columns and rows:
 	lcd.begin(16, 2);
 
-	// Benutzerdefinierte symbole:
+	// User defined symbols:
 	byte chr1[8] = {
 		0b00100,
 		0b11111,
