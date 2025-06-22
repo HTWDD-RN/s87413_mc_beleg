@@ -85,7 +85,7 @@ ArduinoLEDMatrix matrix;
 int currentPattern = 0;
 uint8_t currentPlayer = 0; // Player 1 == 0, Player 2 == 1 , free == 5
 
-// Keys 0 bis 16
+// Keys 0 to 16
 const int anz_tasten = 17;
 int tasten[anz_tasten] = {933, 780, 670, 565, 483, 439, 403, 361, 328, 307, 290, 269, 240, 239, 228, 100, 0};
 
@@ -94,19 +94,22 @@ unsigned long timer = 0;
 unsigned long deltaTime = 0;
 unsigned long buttonTimer = 0;
 unsigned long lastTimer = 0;
-
 // Sound
 const int buzzer = 10;
+
+int dbgServerAvailable = 0;
 
 boolean gameOver = false;
 int state = 0;
 
-// notes in the melody:
+// Notes in the melody:
 int melody[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
 
-// note durations: 4 = quarter note, 8 = eighth note, etc.:
+// Note durations: 4 = quarter note, 8 = eighth note, etc.:
 int noteDurations[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
+
+// Handle client requests and sending responses
 void handleClient(WiFiClient client) {
 	Serial.print("+");
 	String request = "";
@@ -125,7 +128,7 @@ void handleClient(WiFiClient client) {
 	}
 
 	String response;
-	// Rquest for current game state
+	// Request for current game state
 	if (request.indexOf("GET /gamestate") >= 0) {
 		String json = "{\"game\":[";
 		for (int i = 0; i < 3; i++) {
@@ -206,8 +209,6 @@ void setup() {
 
 	OPAMP.begin(OPAMP_SPEED_HIGHSPEED);
 }
-
-int dbgServerAvailable = 0;
 
 void loop() {
 
